@@ -5,8 +5,8 @@ require './helpers/asana_helper.rb'
 include AsanaHelper
 
 communicate(:action => 'Set sections for Jira tasks') do
-  params = parse_input(@input, [:section_in_next, :section_in_scheduled])
-  if params[:section_in_next] && !params[:section_in_next].empty?
+  params = parse_input(@input, [:next_jira_project, :section_in_next, :section_in_scheduled])
+  if params[:next_jira_project] && !params[:next_jira_project].empty?
     if File.exists?(CONFIG_PATH)
       @config = JSON.parse(File.read(CONFIG_PATH), :symbolize_names => true)
     else
@@ -14,30 +14,38 @@ communicate(:action => 'Set sections for Jira tasks') do
       @config = {}
     end
     @config[:asana] ||= {}
+    project_found = false
     for_each_project do |project|
-      if project['name'] == @config[:asana][:next_project][:name]
-        configure_project(:next_project, project)
+      if project['name'] == params[:next_jira_project]
+        configure_project(:next_jira_project, project)
+        project_found = true
       elsif project['name'] == @config[:asana][:scheduled_project][:name]
         configure_project(:scheduled_project, project)
       end
     end
-    section_next = params[:section_in_next].downcase.gsub(' ', '_').to_sym
-    if @config[:asana][:next_project][:sections][section_next]
-      @config[:asana][:next_project][:jira_section] = section_next
-      if params[:section_in_scheduled] && !params[:section_in_scheduled].empty?
-        section_scheduled = params[:section_in_scheduled].downcase.gsub(' ', '_').to_sym
-        if @config[:asana][:scheduled_project][:sections][section_scheduled]
-          @config[:asana][:scheduled_project][:jira_section] = section_scheduled
+    if project_found
+      if params[:section_in_next] && !params[:section_in_next].empty?
+        section_next = params[:section_in_next].downcase.gsub(' ', '_').to_sym
+        if @config[:asana][:next_jira_project][:sections][section_next]
+          @config[:asana][:next_jira_project][:jira_section] = section_next
+          if params[:section_in_scheduled] && !params[:section_in_scheduled].empty?
+            section_scheduled = params[:section_in_scheduled].downcase.gsub(' ', '_').to_sym
+            if @config[:asana][:scheduled_project][:sections][section_scheduled]
+              @config[:asana][:scheduled_project][:jira_section] = section_scheduled
+            else
+              @result += "Inserted section in Scheduled doesn't respond to any existing section."
+            end
+          end
         else
-          puts "Inserted section in Scheduled doesn't respond to any existing section."
+          @result += "Inserted section in Next doesn't respond to any existing section."
         end
       end
+      File.write(CONFIG_PATH, JSON.pretty_unparse(@config))
+      @result += 'Asana location for Jira tasks is set.'
     else
-      puts "Inserted section in Next doesn't respond to any existing section."
+      @result += "Project #{params[:next_jira_project]} doesn't exist"
     end
-    File.write(CONFIG_PATH, JSON.pretty_unparse(@config))
-    puts 'Asana location for Jira tasks is set.'
   else
-    puts 'Put location in format <section_in_next>:<section_in_scheduled>'
+    @result += 'Put location in format <next_jira_project>:<section_in_next>:<section_in_scheduled>'
   end
 end

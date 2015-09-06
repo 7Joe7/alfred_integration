@@ -149,13 +149,11 @@ module AlfredHelper
             all_logged_time += end_time - start_time
           end
         end
-        # if all_logged_time > 0
-          id = task['id'].to_s
-          tasks[id] ||= {}
-          tasks[id][:title] ||= task['name']
-          tasks[id][:logged] ||= 0
-          tasks[id][:logged] += all_logged_time.to_i
-        # end
+        id = task['id'].to_s
+        tasks[id] ||= {}
+        tasks[id][:title] ||= task['name']
+        tasks[id][:logged] ||= 0
+        tasks[id][:logged] += all_logged_time.to_i
       end
     end
   end
@@ -201,10 +199,41 @@ module AlfredHelper
   end
 
   def sync_cache
-    cache = Nokogiri::XML(File.open(CACHE_ADDRESS, 'r') { |f| f.read })
-    in_progress_tasks = cache.xpath("//items/item/subtitle[contains(text(), '#{STATUS_NAMES[:in_progress]}')]")
-    cache_xml = get_new_cache(in_progress_tasks.map { |task| task.parent['arg'] })
-    in_progress_tasks.each { |subtitle| cache_xml.xpath('//items').first.children.before(subtitle.parent.dup) }
+    if File.exists?(CACHE_ADDRESS)
+      cache = Nokogiri::XML(File.open(CACHE_ADDRESS, 'r') { |f| f.read })
+      backup = cache.xpath("//items/item/subtitle[contains(text(), '#{STATUSES[:in_progress][:name]}')]/ancestor::item|//items/item/anybar/ancestor::item").to_a
+    else
+      backup = []
+    end
+    now = Time.now
+    cache_xml = get_new_cache
+    cache_xml.xpath('//items/item').each do |task|
+      project, _, due_on, logged = parse_subtitle(task.at('subtitle').content)
+      backed_up_task = backup.find { |backup_task| backup_task['arg'] == task['arg'] }
+      backup.delete(backed_up_task)
+      if backed_up_task
+        task.add_child(backed_up_task.at('anybar').dup)
+        _, status, _, _ = parse_subtitle(backed_up_task.at('subtitle').content)
+        if status == STATUSES[:in_progress][:name]
+          unfinished_log = backed_up_task.css('log').find { |log| !log['end'] }
+          if unfinished_log
+            task.add_child(unfinished_log.dup)
+            logged ||= 0
+            logged += (now - Time.parse(unfinished_log['start']))
+          end
+          start_anybar(task, STATUSES[:in_progress][:colour])
+          task.at('subtitle').content = create_subtitle(project, status, due_on, logged)
+        elsif @config[:asana][:anybar_active] && due_on && Time.parse(due_on) < now
+          start_anybar(task, STATUSES[:behind_schedule][:colour])
+        end
+      elsif @config[:asana][:anybar_active] && due_on && Time.parse(due_on) < now
+        start_anybar(task, STATUSES[:behind_schedule][:colour])
+      end
+    end
+    items = cache_xml.at('//items')
+    cache_xml.xpath("//items/item/subtitle[contains(text(), 'Due on ')]/ancestor::item").each { |task| items.children.before(task) }
+    cache_xml.xpath("//items/item/subtitle[contains(text(), '#{STATUSES[:in_progress][:name]}')]/ancestor::item").each { |task| items.children.before(task) }
     File.write(CACHE_ADDRESS, cache_xml)
+    backup.each { |old_task| quit_anybar(old_task) } if @config[:asana][:anybar_active]
   end
 end

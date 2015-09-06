@@ -6,7 +6,7 @@ module AnybarHelper
     `ANYBAR_PORT=#{port} ANYBAR_TITLE="#{task.at('title').content}" open -n #{ANYBAR_APP_ADDRESS}`
   end
 
-  def start_anybar(task)
+  def start_anybar(task, colour)
     port = get_task_anybar_port(task)
     unless port
       port = @config[:anybar][:ports].pop
@@ -14,8 +14,8 @@ module AnybarHelper
       task.add_child("<anybar>#{port}</anybar>")
     end
     sleep 2
-    anybar('blue', port)
-    task.at('icon').content = 'pictures/blue@2x.png'
+    anybar(colour, port)
+    task.at('icon').content = "pictures/#{colour}@2x.png"
   end
 
   def anybar(command, port)
@@ -34,22 +34,12 @@ module AnybarHelper
     end
   end
 
-  def pause_anybar(task)
-    port = get_task_anybar_port(task)
-    unless port
-      port = @config[:anybar][:ports].pop
-      start_session(port, task)
-    end
-    anybar('yellow', port)
-    task.at('icon').content = 'pictures/yellow@2x.png'
-  end
-
   def get_task_anybar_port(task, remove = false)
-    anybar_elements = task.xpath("//item[@arg='#{task['arg']}']/anybar")
+    anybar_element = task.at('anybar')
     port = nil
-    unless anybar_elements.empty?
-      port = anybar_elements.first.content.to_i
-      anybar_elements.remove if remove
+    if anybar_element
+      port = anybar_element.content.to_i
+      anybar_element.remove if remove
     end
     port
   end

@@ -5,7 +5,9 @@ module JiraHelper
                         :waiting_for_feedback => 'Waiting for Feedback', :closed => 'Closed', :to_test => 'To Test' }
 
   def insert_from_jira_into_asana
-    next_section = @config[:asana][:next_project][:jira_section] ? @config[:asana][:next_project][:jira_section].to_sym : nil
+    next_jira_project = @config[:asana][:next_jira_project] || @config[:asana][:next_project]
+    next_section = @config[:asana][:next_jira_project][:jira_section] ? @config[:asana][:next_jira_project][:jira_section] : nil
+    next_section &&= next_section.to_sym
     scheduled_section = @config[:asana][:scheduled_project][:jira_section] ? @config[:asana][:scheduled_project][:jira_section].to_sym : nil
     # someday_section = @config[:asana][:someday_project][:jira_section] ? @config[:asana][:someday_project][:jira_section].to_sym : nil
     for_each_issue_in("jql=assignee%3D#{@config[:jira][:credentials][:username]}") do |issue|
@@ -34,7 +36,7 @@ module JiraHelper
             (issue['fields']['customfield_10005'] && issue['fields']['customfield_10005'][0] =~ /state=ACTIVE/) ||
             issue['fields']['status']['name'] == ISSUE_STATUS_NAMES[:waiting_for_feedback]
           data.merge!(:section => next_section) if next_section
-          create_task(data.merge(:project => @config[:asana][:next_project]))
+          create_task(data.merge(:project => next_jira_project))
         else
           # TODO either implement a way to update the task when it is planned in or let it not created at all
           # data.merge!(:section => someday_section) if someday_section

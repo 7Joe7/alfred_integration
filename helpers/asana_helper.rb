@@ -19,10 +19,10 @@ module AsanaHelper
   LOGS_ADDRESS = "#{NVPREFS}#{BUNDLE_ID}/asana.log"
   VIEW_LOGS_ADDRESS = "#{NVPREFS}#{BUNDLE_ID}/logs.xml"
   CONFIG_PATH = "#{NVPREFS}#{BUNDLE_ID}/config.json"
-  SYNC_REGEX = { :jira_key => /^[A-Z]{2,}-\d+/, :asana_log => /Log (\d{4}-\d{2}-\d{2} \d{2}:\d{2})( - \d{4}-\d{2}-\d{2} \d{2}:\d{2})?/ }
+  SYNC_REGEX = { :jira_key => /^[A-Z]{2,}-\d+/, :asana_log => /Log (\d{4}-\d{2}-\d{2} \d{2}:\d{2})( - \d{4}-\d{2}-\d{2} \d{2}:\d{2})?/, :asana_log_simple => /Log \d{4}-\d{2}-\d{2} \d{2}:\d{2} - \d{4}-\d{2}-\d{2} \d{2}:\d{2}/ }
   ASANA_LOG_TIME_FORMAT = '%Y-%m-%d %H:%M'
   LOG_DATE_FORMAT = '%Y-%m-%d'
-  STATUS_NAMES = { :in_progress => 'In Progress', :cached_for_completion => 'Cached for Completion' }
+  STATUSES = { :in_progress => { :name => 'In Progress', :colour => 'blue' }, :behind_schedule => { :colour => 'red' }}
   SUPPORTED_FOR_CACHING = %w(create update delete toggle_task_progress pause_task)
 
   def communicate(params = {})
@@ -76,10 +76,16 @@ module AsanaHelper
     task = cache.xpath("//items/item[@arg='#{params[:task_id]}']").first
     params[:complete] = false
     project, old_status, due_on, _ = parse_subtitle(task.at('subtitle').content)
-    if old_status == STATUS_NAMES[:in_progress]
+    if old_status == STATUSES[:in_progress][:name]
       process_logs(task.xpath("//item[@arg='#{params[:task_id]}']/log"), params)
-      quit_anybar(task) if @config[:asana][:anybar_active]
+      if @config[:asana][:anybar_active]
+        due_on && Time.parse(due_on) < Time.now ? start_anybar(task, STATUSES[:behind_schedule][:colour]) : quit_anybar(task)
+      end
       task.at('subtitle').content = create_subtitle(project, nil, due_on, params[:logged])
+      cache_root = cache.at('items')
+      cache.xpath("//items/item/subtitle[contains(text(), '#{STATUSES[:in_progress][:name]}')]/ancestor::item").each do |in_progress_task|
+        cache_root.children.before(in_progress_task) unless cache_root.children.first == in_progress_task
+      end
       begin
         stop_task(params)
         @result += "#{task.at('title').content} is paused."
@@ -99,8 +105,8 @@ module AsanaHelper
         task_data['projects'].find { |task_project| task_project['id'] == @config[:asana][:scheduled_project][:id]}
       post_to_asana("tasks/#{params[:task_id]}/removeProject", { :project => @config[:asana][:next_project][:id] })
     end
-    task_data['notes'].scan(SYNC_REGEX[:asana_log]) { |log| params[:logs] << log unless params[:logs].include?(log) }
-    old_notes = task_data['notes'].gsub(SYNC_REGEX[:asana_log], '')
+    task_data['notes'].scan(SYNC_REGEX[:asana_log_simple]) { |log| params[:logs] << log unless params[:logs].include?(log) }
+    old_notes = task_data['notes'].gsub(SYNC_REGEX[:asana_log_simple], '')
     new_notes = "#{old_notes}\n#{params[:logs].join("\n")}"
     if params[:complete]
       update_task(params[:task_id], { :notes => old_notes } )
@@ -115,7 +121,7 @@ module AsanaHelper
     task = cache.xpath("//items/item[@arg='#{params[:task_id]}']").first
     project, params[:old_status], due_on, _ = parse_subtitle(task.at('subtitle').content)
     process_logs(task.xpath("//item[@arg='#{params[:task_id]}']/log"), params)
-    params[:complete] = params[:old_status] == STATUS_NAMES[:in_progress]
+    params[:complete] = params[:old_status] == STATUSES[:in_progress][:name]
     if params[:complete]
       quit_anybar(task) if @config[:asana][:anybar_active]
       begin
@@ -127,12 +133,12 @@ module AsanaHelper
         raise e
       end
     else
-      start_anybar(task) if @config[:asana][:anybar_active]
+      start_anybar(task, STATUSES[:in_progress][:colour]) if @config[:asana][:anybar_active]
       task.remove
       task.add_child("<log start=\"#{params[:time]}\"/>")
-      task.at('subtitle').content = create_subtitle(project, STATUS_NAMES[:in_progress], due_on, params[:logged])
+      task.at('subtitle').content = create_subtitle(project, STATUSES[:in_progress][:name], due_on, params[:logged])
       cache.xpath('//items').first.children.before(task)
-      @result += "#{task.at('title').content} is put #{STATUS_NAMES[:in_progress]}"
+      @result += "#{task.at('title').content} is put #{STATUSES[:in_progress][:name]}"
     end
     File.write(CACHE_ADDRESS, cache.to_xml)
   end
@@ -154,6 +160,8 @@ module AsanaHelper
   def delete_task(id)
     delete_from_asana("tasks/#{id}")
     @result += 'Task was deleted. '
+  rescue RestClient::ResourceNotFound
+    @result += 'Task didn\'t exist'
   end
 
   def update_task(id, params)

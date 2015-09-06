@@ -18,7 +18,7 @@ communicate(:action => 'create') do
   if project[:id] && project[:id] == @config[:asana][:next_project][:id]
     new_task = "<item arg=#{arg}><title>#{params[:name]}</title><subtitle/><icon>icon.png</icon></item>"
     cache = Nokogiri::XML(File.read(CACHE_ADDRESS))
-    tasks_in_progress = cache.xpath("//items/item/subtitle[contains(text(), '#{STATUS_NAMES[:in_progress]}')]")
+    tasks_in_progress = cache.xpath("//items/item/subtitle[contains(text(), '#{STATUSES[:in_progress][:name]}')]")
     tasks_in_progress.empty? ?
         cache.xpath('//items').first.children.before(new_task) :
         tasks_in_progress.last.after(new_task)

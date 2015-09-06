@@ -9,7 +9,7 @@ Dir.mkdir "#{NVPREFS}#{BUNDLE_ID}" unless Dir.exists?("#{NVPREFS}#{BUNDLE_ID}")
 communicate(:action => 'Log work') { File.write(CACHE_ADDRESS, data = get_new_cache) } unless File.exists?(CACHE_ADDRESS)
 
 xml = Nokogiri::XML(data || File.open(CACHE_ADDRESS, 'r') { |f| f.read })
-in_progress_tasks = xml.xpath("//items/item/subtitle[contains(text(), '#{STATUS_NAMES[:in_progress]}')]/ancestor::item")
+in_progress_tasks = xml.xpath("//items/item/subtitle[contains(text(), '#{STATUSES[:in_progress][:name]}')]/ancestor::item")
 in_progress_tasks.each do |task|
   subtitle = task.css('subtitle')[0]
   project, status, due_on, logged = parse_subtitle(subtitle.content)
