@@ -4,7 +4,8 @@ require './helpers/asana_helper.rb'
 
 include AsanaHelper
 
-communicate(:action => 'Set Pomodoro length') do
+@params = {:action => 'Set Pomodoro length'}
+communicate do
   if @input.to_i > 0
     @config[:asana] ||= {}
     @config[:asana][:pomodoro_length] = @input.to_i

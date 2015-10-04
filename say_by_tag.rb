@@ -4,7 +4,8 @@ require './helpers/asana_helper.rb'
 
 include AsanaHelper
 
-communicate(:action => 'Say by Tag') do
+@params = { :action => 'Say by Tag' }
+communicate do
   tag_stored_name = @input.gsub(' ', '_').downcase.to_sym
   actualize_tags unless @config[:asana][:tags][tag_stored_name]
   if @config[:asana][:tags][tag_stored_name]

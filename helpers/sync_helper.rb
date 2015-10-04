@@ -1,6 +1,5 @@
 module SyncHelper
   def setup
-    @config[:asana][:basic_key] = Base64.encode64("#{@config[:asana][:api_key]}:")
     me_data = get_from_asana('users/me')['data']
     @config[:asana][:my_id] = me_data['id']
     me_data['workspaces'].each do |workspace|
@@ -77,7 +76,7 @@ module SyncHelper
     now = Time.now
     today_project = @config[:asana][:today_project]
     today_section = @config[:asana][:today_project][:today_section] ? @config[:asana][:today_project][:today_section].to_sym : 'null'
-    if @config[:asana][:work_project] && @config[:asana][:work_project][:id]
+    if @config[:synchronise_with_jira_active] && @config[:asana][:work_project] && @config[:asana][:work_project][:id]
       work_project = @config[:asana][:work_project]
       work_section = @config[:asana][:work_project][:today_section] ? @config[:asana][:work_project][:today_section].to_sym : 'null'
       get_tasks.each do |task|
@@ -88,7 +87,9 @@ module SyncHelper
         end
       end
     else
-      get_tasks.each { |task| move_task(task['id'], today_project, today_section) }
+      get_tasks.each do |task|
+        move_task(task['id'], today_project, today_section) if task['due_on'] && now > Time.parse(task['due_on'])
+      end
     end
   end
 end

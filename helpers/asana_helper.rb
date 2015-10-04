@@ -1,7 +1,6 @@
 require 'nokogiri'
 require 'json'
 require 'rest-client'
-require 'base64'
 require './helpers/jira_helper.rb'
 require './helpers/alfred_helper.rb'
 require './helpers/anybar_helper.rb'
@@ -19,13 +18,14 @@ module AsanaHelper
   LOGS_ADDRESS = "#{NVPREFS}#{BUNDLE_ID}/asana.log"
   VIEW_LOGS_ADDRESS = "#{NVPREFS}#{BUNDLE_ID}/logs.xml"
   CONFIG_PATH = "#{NVPREFS}#{BUNDLE_ID}/config.json"
+  PORTS_PATH = "#{NVPREFS}#{BUNDLE_ID}/ports.json"
   SYNC_REGEX = { :jira_key => /^[A-Z]{2,}-\d+/, :asana_log => /Log (\d{4}-\d{2}-\d{2} \d{2}:\d{2})( - \d{4}-\d{2}-\d{2} \d{2}:\d{2})?/, :asana_log_simple => /Log \d{4}-\d{2}-\d{2} \d{2}:\d{2} - \d{4}-\d{2}-\d{2} \d{2}:\d{2}/ }
   ASANA_LOG_TIME_FORMAT = '%Y-%m-%d %H:%M'
   LOG_DATE_FORMAT = '%Y-%m-%d'
   STATUSES = { :in_progress => { :name => 'In Progress', :colour => 'blue' }, :behind_schedule => { :colour => 'red' }}
   SUPPORTED_FOR_CACHING = %w(create update delete toggle_task_progress pause_task)
 
-  def communicate(params = {})
+  def communicate
     if File.exists?(CONFIG_PATH)
       @config = JSON.parse(File.read(CONFIG_PATH), :symbolize_names => true)
       if @config[:asana][:api_key] && @config[:asana][:workspace_name]
@@ -36,16 +36,15 @@ module AsanaHelper
           commit
         rescue SocketError => e
           File.write(LOGS_ADDRESS, "#{e}, #{e.backtrace}")
-          if SUPPORTED_FOR_CACHING.include?(params[:action])
+          if SUPPORTED_FOR_CACHING.include?(@params[:action])
             @config[:asana][:cache] ||= []
-            @config[:asana][:cache] << params
-            @result = "#{params[:action]} cached. "
+            @config[:asana][:cache] << @params
+            @result = "#{@params[:label]} cached. "
           else
-            @result = "#{params[:action]} failed due to bad connection."
+            @result = "#{@params[:label]} failed due to bad connection."
           end
-          File.write(CONFIG_PATH, JSON.pretty_unparse(@config))
         ensure
-          @config[params[:action]] = Time.now
+          @config[@params[:action]] = Time.now
           File.write(CONFIG_PATH, JSON.pretty_unparse(@config))
           puts @result
         end
@@ -86,14 +85,9 @@ module AsanaHelper
       cache.xpath("//items/item/subtitle[contains(text(), '#{STATUSES[:in_progress][:name]}')]/ancestor::item").each do |in_progress_task|
         cache_root.children.before(in_progress_task) unless cache_root.children.first == in_progress_task
       end
-      begin
-        stop_task(params)
-        @result += "#{task.at('title').content} is paused."
-      rescue SocketError => e
-        File.write(CACHE_ADDRESS, cache.to_xml)
-        raise e
-      end
       File.write(CACHE_ADDRESS, cache.to_xml)
+      stop_task(params)
+      @result += "#{task.at('title').content} is paused."
     else
       @result += "#{task.at('title').content} was not in progress."
     end
@@ -124,23 +118,19 @@ module AsanaHelper
     params[:complete] = params[:old_status] == STATUSES[:in_progress][:name]
     if params[:complete]
       quit_anybar(task) if @config[:asana][:anybar_active]
-      begin
-        task.remove
-        stop_task(params)
-        @result += "#{params[:name]} is put to completed."
-      rescue SocketError => e
-        File.write(CACHE_ADDRESS, cache.to_xml)
-        raise e
-      end
+      task.remove
+      File.write(CACHE_ADDRESS, cache.to_xml)
+      stop_task(params)
+      @result += "#{params[:name]} is put to completed."
     else
       start_anybar(task, STATUSES[:in_progress][:colour]) if @config[:asana][:anybar_active]
       task.remove
       task.add_child("<log start=\"#{params[:time]}\"/>")
       task.at('subtitle').content = create_subtitle(project, STATUSES[:in_progress][:name], due_on, params[:logged])
       cache.xpath('//items').first.children.before(task)
+      File.write(CACHE_ADDRESS, cache.to_xml)
       @result += "#{task.at('title').content} is put #{STATUSES[:in_progress][:name]}"
     end
-    File.write(CACHE_ADDRESS, cache.to_xml)
   end
 
   def add_tag(id, tag)
@@ -149,10 +139,10 @@ module AsanaHelper
 
   def create_task(params = {})
     data = { :name => params[:name], :notes => params[:notes] || '', :due_on => params[:due_on] || 'null' }
-    data[:projects] = params[:project][:id] if params[:project][:id]
+    data[:projects] = params[:project][:id] if params[:project] && params[:project][:id]
     task = JSON.load(post_to_asana('tasks', data))['data']
-    move_task(task['id'], params[:project], params[:section]) if params[:section]
-    params[:tags].each { |tag| add_tag(task['id'], tag) } if params[:tags]
+    move_task(task['id'], params[:project], params[:section]) if params[:project] && params[:project][:id] && params[:section]
+    params[:tags].each { |tag| add_tag(task['id'], tag) if tag } if params[:tags]
     @result += "#{params[:name]} task created. "
     task
   end
@@ -169,9 +159,9 @@ module AsanaHelper
   end
 
   def move_task(id, project, section)
-    if section == 'null'
-      post_to_asana("tasks/#{id}/addProject", { :project => project[:id], :section => 'null' })
-    elsif project[:sections][section]
+    post_to_asana("tasks/#{id}/addProject", { :project => project[:id], :section => 'null' }) if section == 'null'
+    section = section.to_sym
+    if project[:sections][section]
       post_to_asana("tasks/#{id}/addProject", { :project => project[:id], :section => project[:sections][section] })
     else
       actualize_projects
@@ -189,24 +179,24 @@ module AsanaHelper
     RestClient.post(
         "https://app.asana.com/api/1.0/#{resource}",
         { :workspace => @config[:asana][:workspace_id], :assignee => @config[:asana][:my_id] }.merge(pars),
-        { :Authorization => "Basic #{@config[:asana][:basic_key]}"}
+        { :Authorization => "Bearer #{@config[:asana][:personal_access_token]}"}
     )
   end
 
   def get_from_asana(url)
-    JSON.load(RestClient.get("https://app.asana.com/api/1.0/#{url}", { :Authorization => "Basic #{@config[:asana][:basic_key]}"}))
+    JSON.load(RestClient.get("https://app.asana.com/api/1.0/#{url}", { :Authorization => "Bearer #{@config[:asana][:personal_access_token]}"}))
   end
 
   def delete_from_asana(resource)
-    RestClient.delete("https://app.asana.com/api/1.0/#{resource}", { :Authorization => "Basic #{@config[:asana][:basic_key]}" })
+    RestClient.delete("https://app.asana.com/api/1.0/#{resource}", { :Authorization => "Bearer #{@config[:asana][:personal_access_token]}" })
   end
 
   def put_on_asana(resource, pars)
-    RestClient.put("https://app.asana.com/api/1.0/#{resource}", pars, { :Authorization => "Basic #{@config[:asana][:basic_key]}"})
+    RestClient.put("https://app.asana.com/api/1.0/#{resource}", pars, { :Authorization => "Bearer #{@config[:asana][:personal_access_token]}"})
   end
 
   def for_each_project
-    get_from_asana("projects?workspace=#{@config[:asana][:workspace_id]}")['data'].each { |project| yield project }
+    get_from_asana("projects?workspace=#{@config[:asana][:workspace_id]}&archived=false")['data'].each { |project| yield project unless project['name'].match(/=== [a-zA-Z]+ ===/) }
   end
 
   def create_tag(name)
@@ -224,14 +214,14 @@ module AsanaHelper
     @tasks ||= get_from_asana("tasks?workspace=#{@config[:asana][:workspace_id]}&assignee=me&completed_since=now&opt_fields=due_on,name,completed,parent")['data']
   end
 
-  def get_managed_tasks(except = [])
+  def get_managed_tasks
     tasks = get_next_tasks
-    tasks.delete_if { |task| task['name'] =~ /:$/ || except.find { |next_task| next_task.to_i == task['id'] } }
+    tasks.delete_if { |task| task['name'] =~ /:$/ }
     for_each_project do |project|
-      if project['id'] != @config[:asana][:next_project][:id] &&
-          project['id'] != @config[:asana][:inbox_project][:id] &&
-          project['id'] != @config[:asana][:scheduled_project][:id] &&
-          project['id'] != @config[:asana][:someday_project][:id]
+      if (!@config[:asana][:next_project] || project['id'] != @config[:asana][:next_project][:id]) &&
+          (!@config[:asana][:inbox_project] || project['id'] != @config[:asana][:inbox_project][:id]) &&
+          (!@config[:asana][:scheduled_project] || project['id'] != @config[:asana][:scheduled_project][:id]) &&
+          (!@config[:asana][:someday_project] || project['id'] != @config[:asana][:someday_project][:id])
         get_tasks_by_project(project).each do |task|
           next_task = tasks.find { |next_task| next_task['id'] == task['id'] }
           next_task['project'] = project['name'] if next_task

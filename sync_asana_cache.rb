@@ -4,7 +4,8 @@ require './helpers/asana_helper.rb'
 
 include AsanaHelper
 
-communicate(:action => 'Refresh Asana cache') do
+@params = {:action => 'Refresh Asana cache'}
+communicate do
   sync_cache if @config[:asana][:refresh_cache_active]
   @result = 'Asana cache syncronised.'
 end

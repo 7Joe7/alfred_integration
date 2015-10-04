@@ -6,7 +6,8 @@ include AsanaHelper
 
 data = nil
 Dir.mkdir "#{NVPREFS}#{BUNDLE_ID}" unless Dir.exists?("#{NVPREFS}#{BUNDLE_ID}")
-communicate(:action => 'Log work') { File.write(CACHE_ADDRESS, data = get_new_cache) } unless File.exists?(CACHE_ADDRESS)
+@params = { :action => 'Log work' }
+communicate { File.write(CACHE_ADDRESS, data = get_new_cache) } unless File.exists?(CACHE_ADDRESS)
 
 xml = Nokogiri::XML(data || File.open(CACHE_ADDRESS, 'r') { |f| f.read })
 in_progress_tasks = xml.xpath("//items/item/subtitle[contains(text(), '#{STATUSES[:in_progress][:name]}')]/ancestor::item")

@@ -4,7 +4,8 @@ require './helpers/asana_helper.rb'
 
 include AsanaHelper
 
-communicate(:action => 'say_subtasks', :id => @input) do
+@params = { :action => 'say_subtasks', :id => @input }
+communicate do
   subtasks = get_from_asana("tasks/#{@input}/subtasks")['data']
   if subtasks.empty?
     `say there are no subtasks of this task.`

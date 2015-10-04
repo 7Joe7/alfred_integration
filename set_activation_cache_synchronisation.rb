@@ -4,7 +4,8 @@ require './helpers/asana_helper.rb'
 
 include AsanaHelper
 
-communicate(:action => 'Refresh cache activation toggle') do
+@params = {:action => 'Refresh cache activation toggle'}
+communicate do
   if @input == 'true'
     @config[:asana][:refresh_cache_active] = true
     puts 'Cache Synchronisation activated.'

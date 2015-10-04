@@ -4,7 +4,8 @@ require './helpers/asana_helper.rb'
 
 include AsanaHelper
 
-communicate(:action => 'Say by Project') do
+@params = { :action => 'Say by Project' }
+communicate do
   if @input && @input != ''
     @input.downcase!
     found = false

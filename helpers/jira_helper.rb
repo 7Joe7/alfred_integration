@@ -2,7 +2,7 @@ module JiraHelper
 
   LOG_DATE_FORMAT = '%Y-%m-%d'
   ISSUE_STATUS_NAMES = { :in_progress => 'In Progress', :testing_in_progress => 'Testing in Progress', :open => 'Open',
-                        :waiting_for_feedback => 'Waiting for Feedback', :closed => 'Closed', :to_test => 'To Test' }
+                        :waiting_for_feedback => 'Waiting for Feedback', :closed => 'Closed', :to_test => 'To Test', :prereleased => 'Prereleased' }
 
   def insert_from_jira_into_asana
     next_jira_project = @config[:asana][:next_jira_project] || @config[:asana][:next_project]
@@ -15,18 +15,20 @@ module JiraHelper
       if task
         if (issue['fields']['status']['name'] == ISSUE_STATUS_NAMES[:closed] ||
             issue['fields']['status']['name'] == ISSUE_STATUS_NAMES[:to_test] ||
-            issue['fields']['status']['name'] == ISSUE_STATUS_NAMES[:testing_in_progress]) && !task['completed']
+            issue['fields']['status']['name'] == ISSUE_STATUS_NAMES[:testing_in_progress] ||
+            issue['fields']['status']['name'] == ISSUE_STATUS_NAMES[:prereleased]) && !task['completed']
           update_task(task['id'], { :completed => true })
         end
       else
         time_estimate_tag = get_estimate_tag(issue['fields']['timeestimate'])
         tags = time_estimate_tag ? [get_tag('Work'), time_estimate_tag] : [get_tag('Work')]
         data = { :name => "#{issue['key']} - #{issue['fields']['summary']}",
-            :notes => "http://jira.ysoft.local/browse/#{issue['key']}",
+            :notes => "http://#{@config[:jira][:credentials][:hostname]}/browse/#{issue['key']}",
             :tags => tags }
         if issue['fields']['status']['name'] == ISSUE_STATUS_NAMES[:closed] ||
             issue['fields']['status']['name'] == ISSUE_STATUS_NAMES[:to_test] ||
-            issue['fields']['status']['name'] == ISSUE_STATUS_NAMES[:testing_in_progress]
+            issue['fields']['status']['name'] == ISSUE_STATUS_NAMES[:testing_in_progress] ||
+            issue['fields']['status']['name'] == ISSUE_STATUS_NAMES[:prereleased]
           # don't add it
         elsif issue['fields']['customfield_10005'] && issue['fields']['customfield_10005'][0] =~ /state=FUTURE/
           data.merge!(:section => scheduled_section) if scheduled_section

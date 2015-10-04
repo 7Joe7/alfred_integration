@@ -4,7 +4,8 @@ require './helpers/asana_helper.rb'
 
 include AsanaHelper
 
-communicate(:action => 'Pause all tasks') do
+@params = { :action => 'Pause all tasks' }
+communicate do
   cache = Nokogiri::XML(File.open(CACHE_ADDRESS, 'r') { |f| f.read })
   cache.xpath("//items/item[contains(@subtitle, 'In Progress')]").each do |task|
     status = nil

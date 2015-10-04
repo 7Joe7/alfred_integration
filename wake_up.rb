@@ -14,22 +14,6 @@ URLS = %w(
   https://www.youtube.com/watch?v=CGyEd0aKWZE&list=RDEMw4pUX9POHNA4NYoqgKAsuw
   https://www.youtube.com/watch?v=aE2GCa-_nyU&list=RDaE2GCa-_nyU)
 
-communicate(:action => 'Habits Recall') do
-  actualize_tags unless @config[:asana][:tags][:habit]
-  if @config[:asana][:tags][:habit]
-    habits = get_tasks_by_tag(:habit)
-    (0..(habits.size - 1)).to_a.shuffle.take(7).each { |i| `say #{habits[i]['name'].gsub("'", '')}` }
-  else
-    @result += 'You don\'t have a tag with name habit.'
-  end
-end
-
-`say I am not telling you it is going to be easy, I am telling u it is going to be worth it.`
-
-`say Can u do it?`
-`say Will it work?`
-`say Is it worth it?`
-
 `open #{URLS[Random.rand(URLS.size)]}`
 
 puts 'I am glad you are still with us :-)'

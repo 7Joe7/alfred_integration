@@ -4,7 +4,8 @@ require './helpers/asana_helper.rb'
 
 include AsanaHelper
 
-communicate(:action => 'Synchronise due today') do
+@params = {:action => 'Synchronise due today'}
+communicate do
   if @config[:asana][:today_project] && @config[:asana][:today_project][:id]
     insert_due_today_into_today
     @result = 'Today tasks have been moved to today section.'

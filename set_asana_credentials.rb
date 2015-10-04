@@ -5,8 +5,8 @@ require './helpers/asana_helper.rb'
 include AsanaHelper
 
 begin
-  params = parse_input(@input, [:api_key, :workspace_name])
-  if params[:api_key] && !params[:api_key].empty? && params[:workspace_name] && !params[:workspace_name].empty?
+  params = parse_input(@input, [:personal_access_token, :workspace_name])
+  if params[:personal_access_token] && !params[:personal_access_token].empty? && params[:workspace_name] && !params[:workspace_name].empty?
     if File.exists?(CONFIG_PATH)
       @config = JSON.parse(File.read(CONFIG_PATH), :symbolize_names => true)
     else
@@ -14,7 +14,7 @@ begin
       @config = {}
     end
     @config[:asana] ||= {}
-    @config[:asana][:api_key] = params[:api_key]
+    @config[:asana][:personal_access_token] = params[:personal_access_token]
     @config[:asana][:workspace_name] = params[:workspace_name]
     File.write(CONFIG_PATH, JSON.pretty_unparse(@config))
     puts 'Asana credentials are set.'

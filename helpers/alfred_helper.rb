@@ -6,7 +6,7 @@ module AlfredHelper
       args.each_with_index { |arg, i| params[keys[i]] = arg }
     else
       params[keys[0]] = input
-      keys[1..-1].each { |key| params[key] = '' }
+      keys[1..-1].each { |key| params[key] = nil }
     end
     params
   end
@@ -34,8 +34,8 @@ module AlfredHelper
     end
   end
 
-  def get_new_cache(except = [])
-    builder = get_items_set(nil, get_managed_tasks(except)) do |task|
+  def get_new_cache
+    builder = get_items_set(nil, get_managed_tasks) do |task|
       subtitle = create_subtitle(task['project'], task['status'], task['due_on'], task['logged_time'])
       {:arg => task['id'], :title => task['name'], :subtitle => subtitle, :logs => task['logs']}
     end
@@ -153,7 +153,7 @@ module AlfredHelper
         tasks[id] ||= {}
         tasks[id][:title] ||= task['name']
         tasks[id][:logged] ||= 0
-        tasks[id][:logged] += all_logged_time.to_i
+        tasks[id][:logged] += all_logged_time.to_ i
       end
     end
   end
@@ -188,7 +188,8 @@ module AlfredHelper
   end
 
   def filter_logs(tasks, params)
-    communicate(:view_logs) do
+    @params = params.merge(:action => 'View Logs')
+    communicate do
       if params[:valid]
         get_completed_tasks(tasks, params) unless params[:incomplete_only]
         get_incomplete_tasks(tasks, params) unless params[:completed_only]
@@ -209,6 +210,7 @@ module AlfredHelper
     cache_xml = get_new_cache
     cache_xml.xpath('//items/item').each do |task|
       project, _, due_on, logged = parse_subtitle(task.at('subtitle').content)
+      logged ||= 0
       backed_up_task = backup.find { |backup_task| backup_task['arg'] == task['arg'] }
       backup.delete(backed_up_task)
       if backed_up_task
@@ -216,11 +218,7 @@ module AlfredHelper
         _, status, _, _ = parse_subtitle(backed_up_task.at('subtitle').content)
         if status == STATUSES[:in_progress][:name]
           unfinished_log = backed_up_task.css('log').find { |log| !log['end'] }
-          if unfinished_log
-            task.add_child(unfinished_log.dup)
-            logged ||= 0
-            logged += (now - Time.parse(unfinished_log['start']))
-          end
+          task.add_child(unfinished_log.dup) if unfinished_log
           start_anybar(task, STATUSES[:in_progress][:colour])
           task.at('subtitle').content = create_subtitle(project, status, due_on, logged)
         elsif @config[:asana][:anybar_active] && due_on && Time.parse(due_on) < now
@@ -231,8 +229,12 @@ module AlfredHelper
       end
     end
     items = cache_xml.at('//items')
-    cache_xml.xpath("//items/item/subtitle[contains(text(), 'Due on ')]/ancestor::item").each { |task| items.children.before(task) }
-    cache_xml.xpath("//items/item/subtitle[contains(text(), '#{STATUSES[:in_progress][:name]}')]/ancestor::item").each { |task| items.children.before(task) }
+    cache_xml.xpath("//items/item/subtitle[contains(text(), 'Due on ')]/ancestor::item").each do |task|
+      items.children.before(task) unless items.children.first == task
+    end
+    cache_xml.xpath("//items/item/subtitle[contains(text(), '#{STATUSES[:in_progress][:name]}')]/ancestor::item").each do |task|
+      items.children.before(task) unless items.children.first == task
+    end
     File.write(CACHE_ADDRESS, cache_xml)
     backup.each { |old_task| quit_anybar(old_task) } if @config[:asana][:anybar_active]
   end

@@ -4,7 +4,8 @@ require './helpers/asana_helper.rb'
 
 include AsanaHelper
 
-communicate(:action => 'Anybar activation toggle') do
+@params = {:action => 'Anybar activation toggle'}
+communicate do
   if @input == 'true'
     @config[:asana][:anybar_active] = true
     puts 'Anybar for Asana Tasks activated.'
