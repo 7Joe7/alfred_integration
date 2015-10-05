@@ -76,7 +76,7 @@ module SyncHelper
     now = Time.now
     today_project = @config[:asana][:today_project]
     today_section = @config[:asana][:today_project][:today_section] ? @config[:asana][:today_project][:today_section].to_sym : 'null'
-    if @config[:synchronise_with_jira_active] && @config[:asana][:work_project] && @config[:asana][:work_project][:id]
+    if @config[:asana][:synchronise_with_jira_active] && @config[:asana][:work_project] && @config[:asana][:work_project][:id]
       work_project = @config[:asana][:work_project]
       work_section = @config[:asana][:work_project][:today_section] ? @config[:asana][:work_project][:today_section].to_sym : 'null'
       get_tasks.each do |task|

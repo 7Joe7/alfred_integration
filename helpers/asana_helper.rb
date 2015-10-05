@@ -28,7 +28,7 @@ module AsanaHelper
   def communicate
     if File.exists?(CONFIG_PATH)
       @config = JSON.parse(File.read(CONFIG_PATH), :symbolize_names => true)
-      if @config[:asana][:api_key] && @config[:asana][:workspace_name]
+      if @config[:asana][:personal_access_token] && @config[:asana][:workspace_name]
         @result = ''
         begin
           setup unless @config[:asana][:my_id]
@@ -49,10 +49,10 @@ module AsanaHelper
           puts @result
         end
       else
-        puts 'Set up Asana API key and workspace name first'
+        puts 'Set up Asana Personal Access Token and workspace name first'
       end
     else
-      puts 'Set up Asana API key and workspace name first'
+      puts 'Set up Asana Personal Access Token and workspace name first'
     end
   rescue Exception => e
     puts 'Operation failed, see logs'
