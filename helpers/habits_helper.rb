@@ -53,6 +53,7 @@ module HabitsHelper
 
   def update_fail_habit(habit)
     fail_habit(habit)
+    habit.delete(:done)
     update_task(habit[:id], {notes: get_habit_notes(habit)})
   end
 
