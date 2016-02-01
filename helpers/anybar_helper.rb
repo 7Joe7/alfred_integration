@@ -47,11 +47,29 @@ module AnybarHelper
     task.at('icon').content = "pictures/#{colour}@2x.png"
   end
 
+  def start_habit_port(habit)
+    unless habit[:port]
+      habit[:port] = pop_port
+      return unless habit[:port]
+    end
+    start_session(habit[:port], habit[:name])
+    sleep 2
+    anybar(get_habit_colour(habit), habit[:port])
+  end
+
   def anybar(command, port)
     any_bar = UDPSocket.new
     any_bar.connect 'localhost', port
     any_bar.send command, 0
     any_bar.close
+  end
+
+  def quit_habit_port(habit)
+    if habit[:port]
+      anybar('quit', habit[:port])
+      return_port(habit[:port])
+      habit.delete(:port)
+    end
   end
 
   def quit_anybar(task)

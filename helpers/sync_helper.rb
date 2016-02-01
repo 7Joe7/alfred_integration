@@ -10,6 +10,7 @@ module SyncHelper
     @config[:asana][:refresh_cache_active] = true if @config[:asana][:refresh_cache_active].nil?
     @config[:asana][:basic_sync_active] = true if @config[:asana][:basic_sync_active].nil?
     @config[:asana][:anybar_active] = false if @config[:asana][:anybar_active].nil?
+    @config[:asana][:habits_active] = false if @config[:asana][:habits_active].nil?
     actualize_projects
     actualize_tags
   end
@@ -17,21 +18,24 @@ module SyncHelper
   def commit
     @config[:asana][:cache] ||= []
     backup = @config[:asana][:cache].dup
-    @config[:asana][:cache].each do |task|
-      backup.delete(task)
-      case task[:action]
+    @config[:asana][:cache].each do |params|
+      backup.delete(params)
+      case params[:action]
         when 'create'
-          create_task(task)
-        when 'delete'
-          delete_task(task[:id])
+          create_task(params)
+        when 'delete', 'delete_habit'
+          delete_task(params[:id])
         when 'update'
-          task.delete(:action)
-          id = task[:id]
-          task.delete(:id)
-          update_task(id, task)
+          params.delete(:action)
+          id = params[:id]
+          params.delete(:id)
+          update_task(id, params)
         when 'toggle_task_progress', 'pause_task'
-          stop_task(task)
+          stop_task(params)
+        when 'set_habit_done', 'set_habit_undone', 'pursue_habit'
+          update_habit(params)
         else
+          send(params[:action], params)
       end
     end
   ensure
@@ -90,6 +94,39 @@ module SyncHelper
       get_tasks.each do |task|
         move_task(task['id'], today_project, today_section) if task['due_on'] && now > Time.parse(task['due_on'])
       end
+    end
+  end
+
+  def sync_habits
+    old_habits = JSON.parse(File.read(HABITS_PATH), :symbolize_names => true) if @config[:asana][:anybar_active]
+    actualize_tags unless @config[:asana][:tags][:habit]
+    if @config[:asana][:tags][:habit]
+      habits = []
+      tasks = get_tasks_by_tag(:habit)
+      tasks.each { |task| habits << to_habit(task) }
+      active_habits = habits.find_all { |habit| habit[:active] }
+      if @config[:asana][:anybar_active]
+        old_habits.each do |old_habit|
+          active_habit = active_habits.find { |habit| habit[:id] == old_habit[:id] }
+          if active_habit
+            if active_habit[:done].nil?
+              if !old_habit[:port]
+                start_habit_port(active_habit) unless active_habit[:only_on_deadline] && !(Time.parse(active_habit[:deadline]).to_date == Time.now.to_date)
+              else
+                active_habit[:port] = old_habit[:port]
+              end
+            end
+          else
+            quit_habit_port(old_habit)
+          end
+        end
+      end
+      active_habits.each { |habit| habits.delete(habit) }
+      habits = active_habits + habits
+      verify_habits(habits)
+      File.write(HABITS_PATH, JSON.pretty_unparse(habits))
+    else
+      @result += "You don't have habit tag"
     end
   end
 end

@@ -5,12 +5,14 @@ require './helpers/jira_helper.rb'
 require './helpers/alfred_helper.rb'
 require './helpers/anybar_helper.rb'
 require './helpers/sync_helper.rb'
+require './helpers/habits_helper.rb'
 
 module AsanaHelper
   include JiraHelper
   include AlfredHelper
   include AnybarHelper
   include SyncHelper
+  include HabitsHelper
 
   NVPREFS = "#{ENV['HOME']}/Library/Application Support/Alfred 2/Workflow Data/"
   BUNDLE_ID = 'com.herokuapp.jotc.asana'
@@ -19,11 +21,12 @@ module AsanaHelper
   VIEW_LOGS_ADDRESS = "#{NVPREFS}#{BUNDLE_ID}/logs.xml"
   CONFIG_PATH = "#{NVPREFS}#{BUNDLE_ID}/config.json"
   PORTS_PATH = "#{NVPREFS}#{BUNDLE_ID}/ports.json"
+  HABITS_PATH = "#{NVPREFS}#{BUNDLE_ID}/habits.json"
   SYNC_REGEX = { :jira_key => /^[A-Z]{2,}-\d+/, :asana_log => /Log (\d{4}-\d{2}-\d{2} \d{2}:\d{2})( - \d{4}-\d{2}-\d{2} \d{2}:\d{2})?/, :asana_log_simple => /Log \d{4}-\d{2}-\d{2} \d{2}:\d{2} - \d{4}-\d{2}-\d{2} \d{2}:\d{2}/ }
   ASANA_LOG_TIME_FORMAT = '%Y-%m-%d %H:%M'
   LOG_DATE_FORMAT = '%Y-%m-%d'
   STATUSES = { :in_progress => { :name => 'In Progress', :colour => 'blue' }, :behind_schedule => { :colour => 'red' }}
-  SUPPORTED_FOR_CACHING = %w(create update delete toggle_task_progress pause_task)
+  SUPPORTED_FOR_CACHING = %w(create update delete toggle_task_progress pause_task set_habit_done pursue_habit set_habit_undone delete_habit create_habit)
 
   def communicate
     if File.exists?(CONFIG_PATH)
@@ -263,7 +266,7 @@ module AsanaHelper
   end
 
   def get_tasks_by_tag(tag_key)
-    get_from_asana("tasks?tag=#{@config[:asana][:tags][tag_key]}&assignee=me&completed_since=now&opt_fields=id,name")['data']
+    get_from_asana("tasks?tag=#{@config[:asana][:tags][tag_key]}&assignee=me&completed_since=now&opt_fields=id,name,notes")['data']
   end
 
   def task_exists?(key)

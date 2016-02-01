@@ -238,4 +238,34 @@ module AlfredHelper
     File.write(CACHE_ADDRESS, cache_xml)
     backup.each { |old_task| quit_anybar(old_task) } if @config[:asana][:anybar_active]
   end
+
+  def habit_to_xml(xml, habit, all)
+    xml.item('arg' => habit[:id]) do
+      xml.title habit[:name]
+      xml.subtitle "#{habit[:successes]}/#{habit[:tries]}, longest: #{habit[:longest]}, actual: #{habit[:actual]}#{", repeating: #{habit[:repetition]}" if habit[:repetition]}"
+      if all
+        xml.subtitle habit[:active] ? 'Stop pursuing habit' : 'Pursue habit daily', 'mod' => 'cmd'
+        xml.subtitle habit[:active] ? 'Stop pursuing habit' : 'Pursue habit weekly', 'mod' => 'alt'
+      end
+      xml.icon habit[:active] ? "pictures/#{get_habit_colour(habit)}@2x.png" : 'pictures/black@2x.png'
+    end
+  end
+
+  def get_habit_colour(habit)
+    if habit[:done].nil?
+      if habit[:only_on_deadline]
+        'cyan'
+      else
+        if habit[:actual] < 21
+          'orange'
+        elsif habit[:actual] < 49
+          'yellow'
+        else
+          'white'
+        end
+      end
+    else
+      habit[:done] ? 'green' : 'red'
+    end
+  end
 end
