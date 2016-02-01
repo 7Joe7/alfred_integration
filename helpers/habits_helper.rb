@@ -16,6 +16,8 @@ module HabitsHelper
   end
 
   def fail_habit(habit)
+    habit[:last_streak_end_date] = @now.to_date
+    habit[:last_streak_length] = habit[:actual]
     habit[:done] = false
     habit[:tries] += 1
     habit[:actual] = 0
@@ -56,14 +58,16 @@ module HabitsHelper
 
   def to_habit(task)
     @today ||= Time.now.to_date
-    habit = { :id => task['id'], :name => task['name'], :created => @today, :active => false, :successes => 0, :tries => 0, :longest => 0, :actual => 0, :notes => task['notes'] }
-    task['notes'].match(/created: (?<created>\d{4}-\d{1,2}-\d{1,2})\nactive: (?<active>\w+)\nsuccesses: (?<successes>\d+)\/(?<tries>\d+)\nlongest: (?<longest>\d+)\nactual: (?<actual>\d+)\nrepetition: (?<repetition>\w*?)\nstart: (?<start>\d{4}-\d{1,2}-\d{1,2})\ndeadline: (?<deadline>\d{4}-\d{1,2}-\d{1,2})?\ndone: ?(?<done>\w*)\nonly_on_deadline: ?(?<only_on_deadline>\w*)/) do |match|
+    habit = { :id => task['id'], :name => task['name'], :created => @today, :active => false, :successes => 0, :tries => 0, :longest => 0, :actual => 0, :last_streak_end_date => nil, :last_streak_length => 0, :notes => task['notes'] }
+    task['notes'].match(/created: (?<created>\d{4}-\d{1,2}-\d{1,2})\nactive: (?<active>\w+)\nsuccesses: (?<successes>\d+)\/(?<tries>\d+)\nlongest: (?<longest>\d+)\nactual: (?<actual>\d+)\nlast_streak_end_date: ?(?<last_streak_end_date>\d{4}-\d{1,2}-\d{1,2})?\nlast_streak_length: ?(?<last_streak_length>\d+)\nrepetition: (?<repetition>\w*?)\nstart: (?<start>\d{4}-\d{1,2}-\d{1,2})\ndeadline: (?<deadline>\d{4}-\d{1,2}-\d{1,2})?\ndone: ?(?<done>\w*)\nonly_on_deadline: ?(?<only_on_deadline>\w*)/) do |match|
       habit[:created] = match[:created]
       habit[:active] = match[:active] == 'true'
       habit[:successes] = match[:successes].to_i
       habit[:tries] = match[:tries].to_i
       habit[:longest] = match[:longest].to_i
       habit[:actual] = match[:actual].to_i
+      habit[:last_streak_end_date] = match[:last_streak_end_date] ? Time.parse(match[:last_streak_end_date]) : nil
+      habit[:last_streak_length] = match[:last_streak_length].to_i
       habit[:repetition] = match[:repetition]
       habit[:start] = match[:start]
       habit[:deadline] = match[:deadline]
@@ -88,6 +92,6 @@ module HabitsHelper
       notes = habit[:notes]
       notes += "\n" unless notes[-1] == "\n"
     end
-    notes + "created: #{habit[:created]}\nactive: #{habit[:active]}\nsuccesses: #{habit[:successes]}/#{habit[:tries]}\nlongest: #{habit[:longest]}\nactual: #{habit[:actual]}\nrepetition: #{habit[:repetition]}\nstart: #{habit[:start]}\ndeadline: #{habit[:deadline]}\ndone: #{habit[:done].nil? ? '' : habit[:done]}\nonly_on_deadline: #{habit[:only_on_deadline]}"
+    notes + "created: #{habit[:created]}\nactive: #{habit[:active]}\nsuccesses: #{habit[:successes]}/#{habit[:tries]}\nlongest: #{habit[:longest]}\nactual: #{habit[:actual]}\nlast_streak_end_date: #{habit[:last_streak_end_date]}\nlast_streak_length: #{habit[:last_streak_length]}\nrepetition: #{habit[:repetition]}\nstart: #{habit[:start]}\ndeadline: #{habit[:deadline]}\ndone: #{habit[:done].nil? ? '' : habit[:done]}\nonly_on_deadline: #{habit[:only_on_deadline]}"
   end
 end
