@@ -108,13 +108,11 @@ module SyncHelper
       if @config[:asana][:anybar_active]
         old_habits.each do |old_habit|
           active_habit = active_habits.find { |habit| habit[:id] == old_habit[:id] }
-          if active_habit
-            if active_habit[:done].nil?
-              if !old_habit[:port]
-                start_habit_port(active_habit) unless active_habit[:only_on_deadline] && !(Time.parse(active_habit[:deadline]).to_date == Time.now.to_date)
-              else
-                active_habit[:port] = old_habit[:port]
-              end
+          if active_habit && active_habit[:done].nil?
+            if !old_habit[:port]
+              start_habit_port(active_habit) unless active_habit[:only_on_deadline] && !(Time.parse(active_habit[:deadline]).to_date == Time.now.to_date)
+            else
+              active_habit[:port] = old_habit[:port]
             end
           else
             quit_habit_port(old_habit)

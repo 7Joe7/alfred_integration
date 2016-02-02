@@ -67,7 +67,7 @@ module HabitsHelper
       habit[:tries] = match[:tries].to_i
       habit[:longest] = match[:longest].to_i
       habit[:actual] = match[:actual].to_i
-      habit[:last_streak_end_date] = match[:last_streak_end_date] ? Time.parse(match[:last_streak_end_date]) : nil
+      habit[:last_streak_end_date] = match[:last_streak_end_date] ? Time.parse(match[:last_streak_end_date]).to_date : nil
       habit[:last_streak_length] = match[:last_streak_length].to_i
       habit[:repetition] = match[:repetition]
       habit[:start] = match[:start]
