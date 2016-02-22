@@ -6,8 +6,8 @@ include AsanaHelper
 
 @params = { :action => 'create_habit', :name => @input }
 communicate do
-  habits = JSON.parse(File.read(HABITS_PATH), :symbolize_names => true)
+  habits = load_habits
   new_habit = to_habit(create_habit(@params))
   habits << new_habit
-  File.write(HABITS_PATH, JSON.pretty_unparse(habits))
+  save_habits(habits)
 end

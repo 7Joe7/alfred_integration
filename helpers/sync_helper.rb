@@ -98,33 +98,48 @@ module SyncHelper
   end
 
   def sync_habits
-    old_habits = JSON.parse(File.read(HABITS_PATH), :symbolize_names => true) if @config[:asana][:anybar_active]
+    @now ||= Time.now
+    old_habits = load_habits
     actualize_tags unless @config[:asana][:tags][:habit]
     if @config[:asana][:tags][:habit]
       habits = []
-      tasks = get_tasks_by_tag(:habit)
-      tasks.each { |task| habits << to_habit(task) }
+      get_tasks_by_tag(:habit).each { |task| habits << to_habit(task) }
       active_habits = habits.find_all { |habit| habit[:active] }
       if @config[:asana][:anybar_active]
         old_habits.each do |old_habit|
           active_habit = active_habits.find { |habit| habit[:id] == old_habit[:id] }
-          if active_habit && active_habit[:done].nil?
-            if !old_habit[:port]
-              start_habit_port(active_habit) unless active_habit[:only_on_deadline] && !(Time.parse(active_habit[:deadline]).to_date == Time.now.to_date)
-            else
-              active_habit[:port] = old_habit[:port]
-            end
-          else
-            quit_habit_port(old_habit)
+          if active_habit
+            active_habit[:port] = old_habit[:port]
+            resolve_anybar_port(active_habit)
           end
         end
       end
       active_habits.each { |habit| habits.delete(habit) }
       habits = active_habits + habits
       verify_habits(habits)
-      File.write(HABITS_PATH, JSON.pretty_unparse(habits))
+      save_habits(habits)
     else
       @result += "You don't have habit tag"
     end
+  end
+
+  def resolve_anybar_port(habit)
+    if !habit[:active] || is_resolved_for_this_period?(habit)
+      quit_habit_port(habit)
+      true
+    elsif habit[:port]
+      # do nothing
+    elsif !habit[:only_on_deadline] || is_day_before_deadline?(habit)
+      start_habit_port(habit)
+      true
+    end
+  end
+
+  def is_resolved_for_this_period?(habit)
+    !habit[:done].nil? && habit[:deadline] > @now
+  end
+
+  def is_day_before_deadline?(habit)
+    habit[:deadline] > @now && habit[:deadline] < (@now + 86400)
   end
 end

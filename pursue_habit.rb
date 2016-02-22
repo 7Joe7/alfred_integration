@@ -20,13 +20,14 @@ communicate do
       habit[:active] = true
       habit[:repetition] = @repetition
       if habit[:repetition] == 'daily'
-        habit[:deadline] = (Time.now + 86400).to_date
+        habit[:deadline] = Time.now + 86400
       elsif habit[:repetition] == 'weekly'
-        habit[:deadline] = (Time.now + 7 * 86400).to_date
+        habit[:deadline] = Time.now + 7 * 86400
+        habit[:only_on_deadline] = true
       end
       habit[:start] = Time.now.to_date
     end
-    File.write(HABITS_PATH, JSON.pretty_unparse(habits))
+    save_habits(habits)
   end
   puts "Habit #{habit[:name]} set to #{habit[:active] ? 'pursued' : 'not pursued'}"
 end
