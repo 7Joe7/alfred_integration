@@ -6,8 +6,7 @@ include AsanaHelper
 
 @params = { :action => 'create_habit', :name => @input }
 communicate do
-  habits = load_habits
-  new_habit = to_habit(create_habit(@params))
-  habits << new_habit
-  save_habits(habits)
+  load_habits
+  @habits << create_habit(@params)
+  save_habits
 end

@@ -6,10 +6,10 @@ include AsanaHelper
 
 @params = { :action => 'set_habit_undone', :id => @input.to_i }
 communicate do
-  habit = update_habit(@params) do |habit, habits|
+  update_habit do |habit|
     fail_habit(habit)
+    habit[:done] = false
     quit_habit_port(habit) if @config[:asana][:anybar_active]
-    save_habits(habits)
+    @result += "Habit #{habit[:name]} set as undone"
   end
-  @result += "Habit #{habit[:name]} set as undone"
 end

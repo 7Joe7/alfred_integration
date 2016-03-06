@@ -15,8 +15,8 @@ communicate do
           start_anybar(task, STATUSES[:in_progress][:colour]) :
           start_anybar(task, STATUSES[:behind_schedule][:colour])
     end
-    habits = load_habits
-    habits.each { |habit| start_habit_port(habit) if habit[:port] && habit[:active] }
+    load_habits
+    @habits.each { |habit| start_habit_port(habit) if habit[:port] && habit[:active] }
     @result = 'AnyBar ports started.'
   end
 end

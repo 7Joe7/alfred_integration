@@ -32,8 +32,6 @@ module SyncHelper
           update_task(id, params)
         when 'toggle_task_progress', 'pause_task'
           stop_task(params)
-        when 'set_habit_done', 'set_habit_undone', 'pursue_habit'
-          update_habit(params)
         else
           send(params[:action], params)
       end
@@ -95,51 +93,5 @@ module SyncHelper
         move_task(task['id'], today_project, today_section) if task['due_on'] && now > Time.parse(task['due_on'])
       end
     end
-  end
-
-  def sync_habits
-    @now ||= Time.now
-    old_habits = load_habits
-    actualize_tags unless @config[:asana][:tags][:habit]
-    if @config[:asana][:tags][:habit]
-      habits = []
-      get_tasks_by_tag(:habit).each { |task| habits << to_habit(task) }
-      active_habits = habits.find_all { |habit| habit[:active] }
-      if @config[:asana][:anybar_active]
-        old_habits.each do |old_habit|
-          active_habit = active_habits.find { |habit| habit[:id] == old_habit[:id] }
-          if active_habit
-            active_habit[:port] = old_habit[:port]
-            resolve_anybar_port(active_habit)
-          end
-        end
-      end
-      active_habits.each { |habit| habits.delete(habit) }
-      habits = active_habits + habits
-      verify_habits(habits)
-      save_habits(habits)
-    else
-      @result += "You don't have habit tag"
-    end
-  end
-
-  def resolve_anybar_port(habit)
-    if !habit[:active] || is_resolved_for_this_period?(habit)
-      quit_habit_port(habit)
-      true
-    elsif habit[:port]
-      # do nothing
-    elsif !habit[:only_on_deadline] || is_day_before_deadline?(habit)
-      start_habit_port(habit)
-      true
-    end
-  end
-
-  def is_resolved_for_this_period?(habit)
-    !habit[:done].nil? && habit[:deadline] > @now
-  end
-
-  def is_day_before_deadline?(habit)
-    habit[:deadline] > @now && habit[:deadline] < (@now + 86400)
   end
 end

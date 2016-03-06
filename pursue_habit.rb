@@ -6,7 +6,9 @@ include AsanaHelper
 
 @params = { :action => 'pursue_habit', :id => @input.to_i}
 communicate do
-  habit = update_habit(@params) do |habit, habits|
+  @now ||= Time.now
+  @today ||= Time.new(@now.year, @now.month, @now.day)
+  update_habit do |habit|
     if habit[:active]
       quit_habit_port(habit) if @config[:asana][:anybar_active]
       habit[:active] = false
@@ -20,14 +22,13 @@ communicate do
       habit[:active] = true
       habit[:repetition] = @repetition
       if habit[:repetition] == 'daily'
-        habit[:deadline] = Time.now + 86400
+        habit[:deadline] = @today + 86400
       elsif habit[:repetition] == 'weekly'
-        habit[:deadline] = Time.now + 7 * 86400
+        habit[:deadline] = @today + 7 * 86400
         habit[:only_on_deadline] = true
       end
-      habit[:start] = Time.now.to_date
+      habit[:start] = @today
     end
-    save_habits(habits)
+    @result = "Habit #{habit[:name]} set to #{habit[:active] ? 'pursued' : 'not pursued'}"
   end
-  puts "Habit #{habit[:name]} set to #{habit[:active] ? 'pursued' : 'not pursued'}"
 end

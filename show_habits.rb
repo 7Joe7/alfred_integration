@@ -8,25 +8,24 @@ include AsanaHelper
 communicate do
   if @config[:asana][:habits_active]
     if File.exists?(HABITS_PATH)
-      habits = load_habits
-      valid_habits = habits.find_all { |habit| habit[:name] =~ /#{@input}/i && (@all || habit[:active]) }
+      load_habits
+      valid_habits = @habits.find_all { |habit| habit[:name] =~ /#{@input}/i && (@all || habit[:active]) }
       builder = Nokogiri::XML::Builder.new { |xml| xml.items { valid_habits.each { |habit| habit_to_xml(xml, habit, @all) } } }
-      save_habits(habits) if verify_habits(habits)
       puts builder.to_xml
     else
       actualize_tags unless @config[:asana][:tags][:habit]
       if @config[:asana][:tags][:habit]
-        habits = []
+        @habits = []
         tasks = get_tasks_by_tag(:habit)
         builder = Nokogiri::XML::Builder.new do |xml|
           xml.items do
             tasks.each do |task|
-              habits << to_habit(task)
-              habit_to_xml(xml, habits.last, @all) if @all || habits.last[:active]
+              @habits << to_habit(task)
+              habit_to_xml(xml, @habits.last, @all) if @all || @habits.last[:active]
             end
           end
         end
-        save_habits(habits)
+        save_habits
         puts builder.to_xml
       else
         builder = Nokogiri::XML::Builder.new do |xml|
