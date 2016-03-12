@@ -7,7 +7,9 @@ module HabitsHelper
       habit[:last_streak_end_date] &&= Time.parse(habit[:last_streak_end_date])
       habit[:start] &&= Time.parse(habit[:start])
       habit[:created] &&= Time.parse(habit[:created])
+      habit[:priority] ||= 9
     end
+    @habits.sort_by! { |habit| get_order(habit) }
   end
 
   def save_habits(habits = @habits)
@@ -77,19 +79,39 @@ module HabitsHelper
       :notes => task['notes'] }
   end
 
-  def get_habit_colour(habit)
+  def process_properties(habit)
     @now ||= Time.now
     if !habit[:done].nil?
-       habit[:done] ? 'green' : 'red'
+      if habit[:done]
+        habit[:order] = "5#{habit[:priority]}".to_i
+        habit[:colour] = 'green'
+      else
+        habit[:order] = "4#{habit[:priority]}".to_i
+        habit[:colour] = 'red'
+      end
     elsif habit[:only_on_deadline] && !is_day_before_deadline?(habit)
-      'cyan'
+      habit[:order] = "6#{habit[:priority]}".to_i
+      habit[:colour] = 'cyan'
     elsif habit[:actual] < 21
-      'orange'
+      habit[:order] = "1#{habit[:priority]}".to_i
+      habit[:colour] = 'orange'
     elsif habit[:actual] < 49
-      'yellow'
+      habit[:order] = "2#{habit[:priority]}".to_i
+      habit[:colour] = 'yellow'
     else
-      'white'
+      habit[:order] = "3#{habit[:priority]}".to_i
+      habit[:colour] = 'white'
     end
+  end
+
+  def get_order(habit)
+    process_properties(habit)
+    habit[:order]
+  end
+
+  def get_habit_colour(habit)
+    process_properties(habit)
+    habit[:colour]
   end
 
   def habit_to_xml(xml, habit, all)
