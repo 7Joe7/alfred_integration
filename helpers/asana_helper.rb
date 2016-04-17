@@ -22,6 +22,7 @@ module AsanaHelper
   CONFIG_PATH = "#{NVPREFS}#{BUNDLE_ID}/config.json"
   PORTS_PATH = "#{NVPREFS}#{BUNDLE_ID}/ports.json"
   HABITS_PATH = "#{NVPREFS}#{BUNDLE_ID}/habits.json"
+  SCORE_PATH = "#{NVPREFS}#{BUNDLE_ID}/score.txt"
   SYNC_REGEX = { :jira_key => /^[A-Z]{2,}-\d+/, :asana_log => /Log (\d{4}-\d{2}-\d{2} \d{2}:\d{2})( - \d{4}-\d{2}-\d{2} \d{2}:\d{2})?/, :asana_log_simple => /Log \d{4}-\d{2}-\d{2} \d{2}:\d{2} - \d{4}-\d{2}-\d{2} \d{2}:\d{2}/ }
   ASANA_LOG_TIME_FORMAT = '%Y-%m-%d %H:%M'
   LOG_DATE_FORMAT = '%Y-%m-%d'

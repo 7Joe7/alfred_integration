@@ -19,7 +19,7 @@ module HabitsHelper
   def update_habit
     load_habits
     habit = @habits.find { |habit| habit[:id] == @params[:id] }
-    verify_habit(habit) if habit[:active]
+    verify_habit(habit) if habit[:active] && !habit[:opportunity]
     @habits.delete(habit)
     @habits.unshift(habit)
     yield habit
@@ -38,16 +38,17 @@ module HabitsHelper
   end
 
   def set_habit_done(habit)
-    habit[:done] = true
+    habit[:done] = true unless habit[:opportunity]
     habit[:successes] += 1
     habit[:tries] += 1
     habit[:actual] += 1
     habit[:longest] = habit[:actual] if habit[:actual] > habit[:longest]
+    habit[:actual] >= 49
   end
 
   def verify_habits
     active_habits = @habits.find_all { |habit| habit[:active] }
-    active_habits.each { |habit| verify_habit(habit) }
+    active_habits.each { |habit| verify_habit(habit) unless habit[:opportunity]}
   end
 
   def verify_habit(habit)
@@ -89,8 +90,11 @@ module HabitsHelper
         habit[:order] = "4#{habit[:priority]}".to_i
         habit[:colour] = 'red'
       end
-    elsif habit[:only_on_deadline] && !is_day_before_deadline?(habit)
+    elsif habit[:opportunity]
       habit[:order] = "6#{habit[:priority]}".to_i
+      habit[:colour] = 'cyan'
+    elsif habit[:only_on_deadline] && !is_day_before_deadline?(habit)
+      habit[:order] = "7#{habit[:priority]}".to_i
       habit[:colour] = 'cyan'
     elsif habit[:actual] < 21
       habit[:order] = "1#{habit[:priority]}".to_i
@@ -100,7 +104,7 @@ module HabitsHelper
       habit[:colour] = 'yellow'
     else
       habit[:order] = "3#{habit[:priority]}".to_i
-      habit[:colour] = 'white'
+      habit[:colour] = 'green'
     end
   end
 
@@ -117,12 +121,17 @@ module HabitsHelper
   def habit_to_xml(xml, habit, all)
     xml.item('arg' => habit[:id]) do
       xml.title habit[:name]
-      xml.subtitle "#{habit[:successes]}/#{habit[:tries]} #{habit[:tries] == 0 ? 0 : (habit[:successes].to_f * 100 / habit[:tries]).round}%, longest: #{habit[:longest]}, actual: #{habit[:actual]}#{", repeating: #{habit[:repetition]}" if habit[:repetition]}"
+      xml.subtitle "#{habit[:successes]}/#{habit[:tries]} #{habit[:tries] == 0 ? 0 : (habit[:successes].to_f * 100 / habit[:tries]).round}%, longest: #{habit[:longest]}, actual: #{habit[:actual]}#{", repeating: #{habit[:repetition]}" if habit[:repetition]}#{", #{habit[:deadline].to_date}" if habit[:repetition] == 'weekly'}#{', opportunity' if habit[:opportunity]}"
       if all
         xml.subtitle habit[:active] ? 'Stop pursuing habit' : 'Pursue habit daily', 'mod' => 'cmd'
         xml.subtitle habit[:active] ? 'Stop pursuing habit' : 'Pursue habit weekly', 'mod' => 'alt'
       end
-      xml.icon habit[:active] ? "pictures/#{get_habit_colour(habit)}@2x.png" : 'pictures/black@2x.png'
+      xml.icon (
+               if habit[:active]
+                 "pictures/#{get_habit_colour(habit)}@2x.png"
+               else
+                 habit[:actual] > 49 ? 'pictures/green@2x.png' : 'pictures/black@2x.png'
+               end)
     end
   end
 

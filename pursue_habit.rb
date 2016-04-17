@@ -17,6 +17,7 @@ communicate do
       habit[:repetition] = nil
       habit[:start] = nil
       habit[:done] = nil
+      habit[:only_on_deadline] = false
     else
       start_habit_port(habit) if @config[:asana][:anybar_active]
       habit[:active] = true

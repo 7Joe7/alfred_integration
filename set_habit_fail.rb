@@ -8,8 +8,10 @@ include AsanaHelper
 communicate do
   update_habit do |habit|
     fail_habit(habit)
-    habit[:done] = false
-    quit_habit_port(habit) if @config[:asana][:anybar_active]
+    unless habit[:opportunity]
+      habit[:done] = false
+      quit_habit_port(habit) if @config[:asana][:anybar_active]
+    end
     @result += "Habit #{habit[:name]} set as undone"
   end
 end
