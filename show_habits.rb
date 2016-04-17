@@ -10,7 +10,14 @@ communicate do
     if File.exists?(HABITS_PATH)
       load_habits
       valid_habits = @habits.find_all { |habit| habit[:name] =~ /#{@input}/i && (@all || habit[:active]) }
-      builder = Nokogiri::XML::Builder.new { |xml| xml.items { valid_habits.each { |habit| habit_to_xml(xml, habit, @all) } } }
+      builder = Nokogiri::XML::Builder.new { |xml| xml.items do
+        xml.item('valid' => 'NO') do
+          xml.title "#{@score} points"
+          xml.subtitle ''
+          xml.icon 'pictures/special.png'
+        end
+        valid_habits.each { |habit| habit_to_xml(xml, habit, @all) }
+      end }
       puts builder.to_xml
     else
       actualize_tags unless @config[:asana][:tags][:habit]

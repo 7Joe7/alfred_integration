@@ -10,10 +10,12 @@ module HabitsHelper
       habit[:priority] ||= 9
     end
     @habits.sort_by! { |habit| get_order(habit) }
+    File.exists?(SCORE_PATH) ? @score = File.read(SCORE_PATH).to_i : @score = 0
   end
 
   def save_habits(habits = @habits)
     File.write(HABITS_PATH, JSON.pretty_unparse(habits))
+    File.write(SCORE_PATH, @score)
   end
 
   def update_habit
@@ -34,6 +36,7 @@ module HabitsHelper
     habit[:last_streak_end_date] = habit[:deadline]
     habit[:last_streak_length] = habit[:actual]
     habit[:tries] += 1
+    habit[:actual] == 0 ? @score -= 2 * (10 - habit[:priority]) : @score -= 10 - habit[:priority]
     habit[:actual] = 0
   end
 
@@ -42,6 +45,7 @@ module HabitsHelper
     habit[:successes] += 1
     habit[:tries] += 1
     habit[:actual] += 1
+    @score += habit[:actual] * (10 - habit[:priority])
     habit[:longest] = habit[:actual] if habit[:actual] > habit[:longest]
     habit[:actual] >= 49
   end
