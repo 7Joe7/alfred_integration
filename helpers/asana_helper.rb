@@ -14,7 +14,7 @@ module AsanaHelper
   include SyncHelper
   include HabitsHelper
 
-  NVPREFS = "#{ENV['HOME']}/Library/Application Support/Alfred 2/Workflow Data/"
+  NVPREFS = "#{ENV['HOME']}/Library/Application Support/Alfred 3/Workflow Data/"
   BUNDLE_ID = 'com.herokuapp.jotc.asana'
   CACHE_ADDRESS = "#{NVPREFS}#{BUNDLE_ID}/cache.xml"
   LOGS_ADDRESS = "#{NVPREFS}#{BUNDLE_ID}/asana.log"
@@ -22,6 +22,7 @@ module AsanaHelper
   CONFIG_PATH = "#{NVPREFS}#{BUNDLE_ID}/config.json"
   PORTS_PATH = "#{NVPREFS}#{BUNDLE_ID}/ports.json"
   HABITS_PATH = "#{NVPREFS}#{BUNDLE_ID}/habits.json"
+  PROMISES_PATH = "#{NVPREFS}#{BUNDLE_ID}/promises.json"
   SCORE_PATH = "#{NVPREFS}#{BUNDLE_ID}/score.txt"
   SYNC_REGEX = { :jira_key => /^[A-Z]{2,}-\d+/, :asana_log => /Log (\d{4}-\d{2}-\d{2} \d{2}:\d{2})( - \d{4}-\d{2}-\d{2} \d{2}:\d{2})?/, :asana_log_simple => /Log \d{4}-\d{2}-\d{2} \d{2}:\d{2} - \d{4}-\d{2}-\d{2} \d{2}:\d{2}/ }
   ASANA_LOG_TIME_FORMAT = '%Y-%m-%d %H:%M'

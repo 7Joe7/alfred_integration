@@ -18,6 +18,20 @@ module HabitsHelper
     File.write(SCORE_PATH, @score)
   end
 
+  def load_promises
+    @promises ||= JSON.parse(File.read(PROMISES_PATH), :symbolize_names => true)
+    @promises.each do |promise|
+      promise[:deadline] &&= Time.parse(promise[:deadline])
+      promise[:created] &&= Time.parse(promise[:created])
+    end
+    File.exists?(SCORE_PATH) ? @score = File.read(SCORE_PATH).to_i : @score = 0
+  end
+
+  def save_promises(promises = @promises)
+    File.write(PROMISES_PATH, JSON.pretty_unparse(promises))
+    File.write(SCORE_PATH, @score)
+  end
+
   def update_habit
     load_habits
     habit = @habits.find { |habit| habit[:id] == @params[:id] }
@@ -28,8 +42,21 @@ module HabitsHelper
     save_habits
   end
 
+  def update_promise
+    load_promises
+    promise = @promises.find { |promise| promise[:id] == @params[:id] }
+    @promises.delete(promise)
+    @promises.unshift(promise)
+    yield promise
+    save_promises
+  end
+
   def create_habit(params)
     to_habit(create_task({ name: params[:name], tags: [@config[:asana][:tags][:habit]]}))
+  end
+
+  def create_promise(params)
+    to_promise(create_task({name: params[:name], tags: [@config[:asana][:tags][:promise]]}))
   end
 
   def fail_habit(habit)
@@ -66,7 +93,7 @@ module HabitsHelper
           break
       end
     end
-    resolve_anybar_port(habit)
+    # resolve_anybar_port(habit)
   end
 
   def to_habit(task)
@@ -81,6 +108,15 @@ module HabitsHelper
       :longest => 0,
       :actual => 0,
       :last_streak_length => 0,
+      :notes => task['notes'] }
+  end
+
+  def to_promise(task)
+    @now ||= Time.now
+    @today ||= Time.new(@now.year, @now.month, @now.day)
+    { :id => task['id'],
+      :name => task['name'],
+      :created => @today,
       :notes => task['notes'] }
   end
 
@@ -120,6 +156,15 @@ module HabitsHelper
   def get_habit_colour(habit)
     process_properties(habit)
     habit[:colour]
+  end
+
+  def promise_to_xml(xml, promise)
+    @now ||= Time.now
+    xml.item('arg' => promise[:id]) do
+      xml.title promise[:name]
+      xml.subtitle "#{"Created: #{promise[:created]}, " if promise[:created]}#{"Deadline: #{promise[:deadline]}, " if promise[:deadline]}Notes: #{promise[:notes]}"
+      xml.icon (promise[:deadline] && promise[:deadline] < @now) ? 'pictures/red@2x.png' : 'pictures/blue@2x.png'
+    end
   end
 
   def habit_to_xml(xml, habit, all)

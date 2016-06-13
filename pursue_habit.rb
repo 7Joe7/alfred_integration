@@ -10,7 +10,7 @@ communicate do
   @today ||= Time.new(@now.year, @now.month, @now.day)
   update_habit do |habit|
     if habit[:active]
-      quit_habit_port(habit) if @config[:asana][:anybar_active]
+      # quit_habit_port(habit) if @config[:asana][:anybar_active]
       habit[:active] = false
       habit[:actual] = 0
       habit[:deadline] = nil
@@ -19,7 +19,7 @@ communicate do
       habit[:done] = nil
       habit[:only_on_deadline] = false
     else
-      start_habit_port(habit) if @config[:asana][:anybar_active]
+      # start_habit_port(habit) if @config[:asana][:anybar_active]
       habit[:active] = true
       habit[:repetition] = @repetition
       if habit[:repetition] == 'daily'

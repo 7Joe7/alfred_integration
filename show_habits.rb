@@ -13,7 +13,15 @@ communicate do
       builder = Nokogiri::XML::Builder.new { |xml| xml.items do
         xml.item('valid' => 'NO') do
           xml.title "#{@score} points"
-          xml.subtitle ''
+          today_valid, week_valid = [], []
+          valid_habits.each do |habit|
+            if habit[:repetition] == 'daily'
+              today_valid << habit
+            else
+              week_valid << habit
+            end
+          end
+          xml.subtitle "Today done #{(today_valid.find_all { |habit| habit[:done] }).count}/#{today_valid.count}, this week done #{(week_valid.find_all { |habit| habit[:done]}).count}/#{week_valid.count}"
           xml.icon 'pictures/special.png'
         end
         valid_habits.each { |habit| habit_to_xml(xml, habit, @all) }

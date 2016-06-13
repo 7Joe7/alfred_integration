@@ -10,7 +10,7 @@ communicate do
     fail_habit(habit)
     unless habit[:opportunity]
       habit[:done] = false
-      quit_habit_port(habit) if @config[:asana][:anybar_active]
+      # quit_habit_port(habit) if @config[:asana][:anybar_active]
     end
     @result += "Habit #{habit[:name]} set as undone"
   end

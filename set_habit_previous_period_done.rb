@@ -16,6 +16,7 @@ communicate do
     habit[:actual] += 1
     habit[:tries] = 1 if habit[:tries] == 0
     habit[:longest] = habit[:actual] if habit[:actual] > habit[:longest]
+    @score += (habit[:actual] + 1) * (10 - habit[:priority])
     @result += "Habit #{habit[:name]} set as done"
   end
 end
