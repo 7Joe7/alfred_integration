@@ -60,11 +60,15 @@ module HabitsHelper
   end
 
   def fail_habit(habit)
-    habit[:last_streak_end_date] = habit[:deadline]
-    habit[:last_streak_length] = habit[:actual]
     habit[:tries] += 1
-    habit[:actual] == 0 ? @score -= 2 * (10 - habit[:priority]) : @score -= 10 - habit[:priority]
-    habit[:actual] = 0
+    if habit[:actual] > 0
+      habit[:last_streak_end_date] = habit[:deadline]
+      habit[:last_streak_length] = habit[:actual]
+      habit[:actual] = -1
+    else
+      habit[:actual] -= 1
+    end
+    @score -= habit[:actual] * (10 - habit[:priority])
   end
 
   def set_habit_done(habit)

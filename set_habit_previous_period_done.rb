@@ -9,9 +9,10 @@ communicate do
   @now ||= Time.now
   update_habit do |habit|
     habit[:successes] += 1
+    habit[:actual] = 0 if habit[:actual] < 0
     if (habit[:repetition] == 'daily' && (habit[:last_streak_end_date] + 86400) >= habit[:deadline]) ||
         (habit[:repetition] == 'weekly' && (habit[:last_streak_end_date] + 604800) >= habit[:deadline])
-      habit[:actual] = habit[:last_streak_length] + habit[:actual]
+      habit[:actual] += habit[:last_streak_length]
     end
     habit[:actual] += 1
     habit[:tries] = 1 if habit[:tries] == 0
