@@ -75,6 +75,7 @@ module HabitsHelper
     habit[:done] = true unless habit[:opportunity]
     habit[:successes] += 1
     habit[:tries] += 1
+    habit[:actual] = 0 if habit[:actual] < 0
     habit[:actual] += 1
     @score += habit[:actual] * (10 - habit[:priority])
     habit[:longest] = habit[:actual] if habit[:actual] > habit[:longest]
