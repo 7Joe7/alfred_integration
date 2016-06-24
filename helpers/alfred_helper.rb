@@ -34,8 +34,8 @@ module AlfredHelper
     end
   end
 
-  def get_new_cache
-    builder = get_items_set(nil, get_managed_tasks) do |task|
+  def get_new_cache(project)
+    builder = get_items_set(nil, get_managed_tasks(project)) do |task|
       subtitle = create_subtitle(task['project'], task['status'], task['due_on'], task['logged_time'])
       {:arg => task['id'], :title => task['name'], :subtitle => subtitle, :logs => task['logs']}
     end
@@ -199,15 +199,23 @@ module AlfredHelper
     end
   end
 
-  def sync_cache
-    if File.exists?(CACHE_ADDRESS)
-      cache = Nokogiri::XML(File.open(CACHE_ADDRESS, 'r') { |f| f.read })
+  def sync_cache(project)
+    case project
+      when :next_project
+        cache_file = CACHE_ADDRESS
+      when :work_project
+        cache_file = WORK_CACHE_ADDRESS
+      else
+        raise 'Project not supported'
+    end
+    if File.exists?(cache_file)
+      cache = Nokogiri::XML(File.open(cache_file, 'r') { |f| f.read })
       backup = cache.xpath("//items/item/subtitle[contains(text(), '#{STATUSES[:in_progress][:name]}')]/ancestor::item|//items/item/anybar/ancestor::item").to_a
     else
       backup = []
     end
     now = Time.now
-    cache_xml = get_new_cache
+    cache_xml = get_new_cache(project)
     cache_xml.xpath('//items/item').each do |task|
       project, _, due_on, logged = parse_subtitle(task.at('subtitle').content)
       logged ||= 0
@@ -235,7 +243,7 @@ module AlfredHelper
     cache_xml.xpath("//items/item/subtitle[contains(text(), '#{STATUSES[:in_progress][:name]}')]/ancestor::item").each do |task|
       items.children.before(task) unless items.children.first == task
     end
-    File.write(CACHE_ADDRESS, cache_xml)
+    File.write(cache_file, cache_xml)
     backup.each { |old_task| quit_anybar(old_task) } if @config[:asana][:anybar_active]
   end
 end

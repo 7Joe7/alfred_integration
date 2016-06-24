@@ -17,6 +17,7 @@ module AsanaHelper
   NVPREFS = "#{ENV['HOME']}/Library/Application Support/Alfred 3/Workflow Data/"
   BUNDLE_ID = 'com.herokuapp.jotc.asana'
   CACHE_ADDRESS = "#{NVPREFS}#{BUNDLE_ID}/cache.xml"
+  WORK_CACHE_ADDRESS = "#{NVPREFS}#{BUNDLE_ID}/work_cache.xml"
   LOGS_ADDRESS = "#{NVPREFS}#{BUNDLE_ID}/asana.log"
   VIEW_LOGS_ADDRESS = "#{NVPREFS}#{BUNDLE_ID}/logs.xml"
   CONFIG_PATH = "#{NVPREFS}#{BUNDLE_ID}/config.json"
@@ -219,8 +220,15 @@ module AsanaHelper
     @tasks ||= get_from_asana("tasks?workspace=#{@config[:asana][:workspace_id]}&assignee=me&completed_since=now&opt_fields=due_on,name,completed,parent")['data']
   end
 
-  def get_managed_tasks
-    tasks = get_next_tasks
+  def get_managed_tasks(project)
+    case project
+      when :next_project
+        tasks = get_next_tasks
+      when :work_project
+        tasks = get_work_next_tasks
+      else
+        raise 'This project is not supported'
+    end
     tasks.delete_if { |task| task['name'] =~ /:$/ }
     for_each_project do |project|
       if (!@config[:asana][:next_project] || project['id'] != @config[:asana][:next_project][:id]) &&
@@ -259,8 +267,16 @@ module AsanaHelper
     end
   end
 
+  def get_actual_tasks_from_project(project)
+    get_from_asana("tasks?project=#{@config[:asana][project][:id]}&assignee=me&completed_since=now&opt_fields=id,due_on,name,completed,parent,notes")['data']
+  end
+
   def get_next_tasks
-    @next_tasks ||= get_from_asana("tasks?project=#{@config[:asana][:next_project][:id]}&assignee=me&completed_since=now&opt_fields=id,due_on,name,completed,parent,notes")['data']
+    @next_tasks ||= get_actual_tasks_from_project(:next_project)
+  end
+
+  def get_work_next_tasks
+    @work_next_tasks ||= get_actual_tasks_from_project(:work_project)
   end
 
   def get_tasks_by_project(project, fields = 'id', completed_since = 'now')

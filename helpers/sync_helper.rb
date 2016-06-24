@@ -49,12 +49,15 @@ module SyncHelper
     @config[:asana][:someday_project][:name] ||= 'Someday'
     @config[:asana][:scheduled_project] ||= {}
     @config[:asana][:scheduled_project][:name] ||= 'Scheduled'
+    @config[:asana][:work_project] ||= {}
     for_each_project do |project|
       case project['name']
         when @config[:asana][:inbox_project][:name] then configure_project(:inbox_project, project)
         when @config[:asana][:next_project][:name] then configure_project(:next_project, project)
         when @config[:asana][:someday_project][:name] then configure_project(:someday_project, project)
         when @config[:asana][:scheduled_project][:name] then configure_project(:scheduled_project, project)
+        when @config[:asana][:work_project][:name]
+          configure_project(:work_project, project)
         else
       end
     end

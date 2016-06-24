@@ -17,7 +17,10 @@ communicate do
     end
     setup if @config[:asana][:basic_sync_active]
     sync_habits if @config[:asana][:habits_active]
-    sync_cache if @config[:asana][:refresh_cache_active]
+    if @config[:asana][:refresh_cache_active]
+      sync_cache(:next_project)
+      sync_cache(:work_project) if @config[:asana][:work_project] && @config[:asana][:work_project][:name]
+    end
     begin
       insert_from_jira_into_asana if @config[:asana][:synchronise_with_jira_active]
     rescue SocketError
