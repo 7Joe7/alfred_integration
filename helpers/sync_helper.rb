@@ -84,11 +84,22 @@ module SyncHelper
     if @config[:asana][:synchronise_with_jira_active] && @config[:asana][:work_project] && @config[:asana][:work_project][:id]
       work_project = @config[:asana][:work_project]
       work_section = @config[:asana][:work_project][:today_section] ? @config[:asana][:work_project][:today_section].to_sym : 'null'
+      work_tasks = get_tasks_by_project(work_project)
       get_tasks.each do |task|
         if task['due_on'] && now > Time.parse(task['due_on'])
-          (task['name'] =~ SYNC_REGEX[:jira_key]) ?
-              move_task(task['id'], work_project, work_section) :
-              move_task(task['id'], today_project, today_section)
+          found = false
+          work_tasks.each do |work_task|
+            if work_task['id'] == task['id']
+              move_task(task['id'], work_project, work_section)
+              found = true
+              break
+            end
+          end
+          unless found
+            (task['name'] =~ SYNC_REGEX[:jira_key]) ?
+                move_task(task['id'], work_project, work_section) :
+                move_task(task['id'], today_project, today_section)
+          end
         end
       end
     else
