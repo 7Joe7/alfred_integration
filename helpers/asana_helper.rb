@@ -1,3 +1,5 @@
+# encoding: UTF-8
+
 require 'nokogiri'
 require 'json'
 require 'rest-client'
@@ -117,7 +119,12 @@ module AsanaHelper
   end
 
   def toggle_task_progress(params = {})
-    cache = Nokogiri::XML(File.open(CACHE_ADDRESS, 'r') { |f| f.read })
+    cache_file = CACHE_ADDRESS
+    case params[:task_type]
+      when :work_project
+        cache_file = WORK_CACHE_ADDRESS
+    end
+    cache = Nokogiri::XML(File.open(cache_file, 'r') { |f| f.read })
     task = cache.xpath("//items/item[@arg='#{params[:task_id]}']").first
     project, params[:old_status], due_on, _ = parse_subtitle(task.at('subtitle').content)
     process_logs(task.xpath("//item[@arg='#{params[:task_id]}']/log"), params)
@@ -125,7 +132,7 @@ module AsanaHelper
     if params[:complete]
       quit_anybar(task) if @config[:asana][:anybar_active]
       task.remove
-      File.write(CACHE_ADDRESS, cache.to_xml)
+      File.write(cache_file, cache.to_xml)
       stop_task(params)
       @result += "#{params[:name]} is put to completed."
     else
@@ -134,7 +141,7 @@ module AsanaHelper
       task.add_child("<log start=\"#{params[:time]}\"/>")
       task.at('subtitle').content = create_subtitle(project, STATUSES[:in_progress][:name], due_on, params[:logged])
       cache.xpath('//items').first.children.before(task)
-      File.write(CACHE_ADDRESS, cache.to_xml)
+      File.write(cache_file, cache.to_xml)
       @result += "#{task.at('title').content} is put #{STATUSES[:in_progress][:name]}"
     end
   end

@@ -1,3 +1,5 @@
+# encoding: UTF-8
+
 module AlfredHelper
   def parse_input(input, keys)
     params = {}
@@ -35,7 +37,13 @@ module AlfredHelper
   end
 
   def get_new_cache(project)
-    builder = get_items_set(nil, get_managed_tasks(project)) do |task|
+    prefix = nil
+    case project
+      when :work_project
+        prefix = 'w'
+      else
+    end
+    builder = get_items_set(prefix, get_managed_tasks(project)) do |task|
       subtitle = create_subtitle(task['project'], task['status'], task['due_on'], task['logged_time'])
       {:arg => task['id'], :title => task['name'], :subtitle => subtitle, :logs => task['logs']}
     end

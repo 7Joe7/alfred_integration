@@ -1,3 +1,5 @@
+# encoding: UTF-8
+
 module HabitsHelper
 
   def load_habits
@@ -68,7 +70,7 @@ module HabitsHelper
     else
       habit[:actual] -= 1
     end
-    @score -= habit[:actual] * (10 - habit[:priority])
+    @score += habit[:actual] * (10 - habit[:priority])
   end
 
   def set_habit_done(habit)
@@ -200,9 +202,13 @@ module HabitsHelper
       get_tasks_by_tag(:habit).each do |task|
         habit = to_habit(task)
         old_habit = @habits.find { |old_habit| old_habit[:id] == habit[:id] }
-        old_habit[:notes] = habit[:notes]
-        old_habit[:name] = habit[:name]
-        new_habits << old_habit
+        if old_habit
+          old_habit[:notes] = habit[:notes]
+          old_habit[:name] = habit[:name]
+          new_habits << old_habit
+        else
+          new_habits << habit
+        end
       end
       save_habits(new_habits)
     else

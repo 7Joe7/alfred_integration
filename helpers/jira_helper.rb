@@ -1,3 +1,5 @@
+# encoding: UTF-8
+
 module JiraHelper
 
   LOG_DATE_FORMAT = '%Y-%m-%d'

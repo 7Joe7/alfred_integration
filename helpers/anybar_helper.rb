@@ -1,3 +1,5 @@
+# encoding: UTF-8
+
 module AnybarHelper
 
   ANYBAR_APP_ADDRESS = '/Applications/AnyBar.app'

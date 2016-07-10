@@ -1,3 +1,5 @@
+# encoding: UTF-8
+
 module SyncHelper
   def setup
     me_data = get_from_asana('users/me')['data']
